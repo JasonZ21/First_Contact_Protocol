@@ -1,0 +1,4 @@
+pytest
+cryptography
+cbor2
+hypothesis

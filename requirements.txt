@@ -1,4 +1,5 @@
 pytest
+pynacl
 cryptography
 cbor2
 hypothesis

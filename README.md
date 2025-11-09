@@ -11,10 +11,14 @@ This project implements a secure communication protocol that allows two users to
 - Exchange messages securely
 
 ## Requirements
-
 - Python 3.7 or higher
 - Make (build automation tool)
-- Dependencies (installed automatically): `cryptography`, `pynacl`, `cbor2`
+
+Install dependencies (if you haven't already):
+
+```powershell
+python -m pip install -r requirements.txt
+```
 
 ## Quick Start
 
@@ -85,4 +89,55 @@ make keys CUSTOM_USERS="Alice Bob"
 Remove all generated files:
 ```bash
 make clean
+```
+
+## Tests
+
+This repository includes a pytest-based test suite that exercises the current
+TLS-based `app` API (handshake and channel code). The tests run entirely
+locally and generate ephemeral Certificate Authority (CA) and identity
+certificates for deterministic, isolated test runs.
+
+Key points:
+
+- Tests use a `session_pair` fixture (in `tests/conftest.py`) which:
+	- Creates a temporary CA and two identity cert/key pairs.
+	- Writes PEM files to a temporary directory.
+	- Temporarily points `app.utils` certificate path constants at those PEM
+		files so the handshake code loads the test certificates.
+	- Spins up an in-process TLS server and client and yields two
+		`SessionState` objects containing the negotiated `ssl.SSLSocket` as
+		`.conn`.
+
+- Helpers live in `tests/utils/`:
+	- `ca.py` — creates test root CA and issues leaf identity certificates.
+	- `transport.py` — simple in-memory/intercepting transports used by some
+		legacy tests.
+	- `timewrap.py` — small context manager placeholder used by tests.
+
+What the tests cover (TLS-focused equivalents):
+
+- Channel integrity: basic client->server TLS send/receive roundtrip.
+- IO robustness: recv loop handling abrupt remote close, and large message
+	handling across multiple TLS records.
+- Forward secrecy: verifies the negotiated cipher suite provides ephemeral
+	key exchange (accepts TLS 1.3 or ECDHE/DHE suites).
+- Handshake MITM: ensures a client rejects a server cert signed by an
+	untrusted (attacker) CA.
+- Replay/truncation: tests that replaying recorded server bytes or a server
+	truncating a payload does not result in a valid handshake or silent data
+	corruption.
+
+How to run the tests (PowerShell)
+
+Run the full test suite:
+
+```powershell
+pytest -q
+```
+
+Run a single test (example):
+
+```powershell
+pytest tests/test_channel_integrity.py::test_tls_send_receive_roundtrip -q
 ```

@@ -1,15 +1,13 @@
 import ssl
 import threading
-from typing import Optional
+from typing import Optional, Callable
 
 # Import necessary utilities using relative path
-from .utils import COLOR_PEER, COLOR_ERROR,COLOR_RESET, MY_USER_ID
+from .utils import COLOR_PEER, COLOR_ERROR, COLOR_RESET, MY_USER_ID
 
 try:
-    # Python 3.7+ uses BlockingIOError for non-blocking read failures
     from ssl import SSLWantReadError
 except ImportError:
-    # Use fallback if SSLWantReadError isn't directly exposed
     class SSLWantReadError(Exception):
         pass
 
@@ -18,11 +16,30 @@ class SessionState:
     def __init__(self, peer_id: str, conn: ssl.SSLSocket):
         self.peer_id = peer_id
         self.conn = conn
-
-def recv_loop(conn: ssl.SSLSocket, peer_id: str, active_conn_ref: dict):
-    """Handles continuous secure reading in a background thread."""
+        self._closed = False
     
-    # Ensure the socket is in blocking mode for reliable reading (default, but confirm)
+    def close(self):
+        """Safely close the connection."""
+        if not self._closed:
+            try:
+                self.conn.close()
+            except:
+                pass
+            self._closed = True
+    
+    def is_closed(self):
+        return self._closed
+
+def recv_loop(conn: ssl.SSLSocket, peer_id: str, on_disconnect: Optional[Callable] = None):
+    """Handles continuous secure reading in a background thread.
+    
+    Args:
+        conn: The SSL socket to read from
+        peer_id: The identifier of the peer
+        on_disconnect: Optional callback function to call when connection is lost
+    """
+    
+    # Ensure the socket is in blocking mode for reliable reading
     conn.settimeout(None) 
     
     while True:
@@ -32,35 +49,49 @@ def recv_loop(conn: ssl.SSLSocket, peer_id: str, active_conn_ref: dict):
             
             if not data:
                 # Peer performed a graceful close (empty read on open socket)
-                raise ConnectionResetError 
+                raise ConnectionResetError("Peer closed connection")
             
             # Print decrypted message
             print(f"\n{COLOR_PEER}[{peer_id}] > {data.decode()}{COLOR_RESET}")
             print(f"\n> ", end="", flush=True)
 
         except SSLWantReadError:
-            # FIX: If the read operation would block (i.e., no data is immediately available), 
-            # we simply continue the loop. This prevents the thread from crashing on idle time.
+            # If the read operation would block, continue waiting
             continue 
-        except ConnectionResetError:
+        except (ConnectionResetError, BrokenPipeError, OSError) as e:
             print(f"\n{COLOR_ERROR}[ERROR] Connection lost with {peer_id}.{COLOR_RESET}")
-            conn.close()
-            active_conn_ref['conn'] = None
             break
         except Exception as e:
             # Catch general errors, including unexpected drops
             print(f"\n{COLOR_ERROR}[ERROR] Receive error: {e}{COLOR_RESET}")
-            conn.close()
-            active_conn_ref['conn'] = None
             break
+    
+    # Clean up and notify
+    try:
+        conn.close()
+    except:
+        pass
+    
+    if on_disconnect:
+        on_disconnect()
 
-def chat_send(conn: ssl.SSLSocket, message: str, user_id: str):
-    """Encrypts and sends a message over the established TLS connection."""
+def chat_send(conn: ssl.SSLSocket, message: str) -> bool:
+    """Encrypts and sends a message over the established TLS connection.
+    
+    Args:
+        conn: The SSL socket to write to
+        message: The message to send
+        
+    Returns:
+        True if successful, False otherwise
+    """
     
     try:
         conn.write(message.encode('utf-8'))
         return True
+    except (BrokenPipeError, OSError) as e:
+        print(f"{COLOR_ERROR}[ERROR] Failed to send: Connection lost{COLOR_RESET}")
+        return False
     except Exception as e:
-        print(f"Failed to send: {e}")
-        conn.close()
+        print(f"{COLOR_ERROR}[ERROR] Failed to send: {e}{COLOR_RESET}")
         return False

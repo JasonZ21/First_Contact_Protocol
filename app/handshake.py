@@ -1,7 +1,7 @@
 import socket
 import ssl
 from typing import Optional
-from .utils import create_ssl_context, get_common_name, COLOR_ERROR
+from .utils import create_ssl_context, get_common_name, COLOR_ERROR, COLOR_RESET
 
 # Import necessary channel classes using relative path
 from .channel import SessionState, recv_loop 

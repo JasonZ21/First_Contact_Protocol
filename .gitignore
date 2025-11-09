@@ -1,0 +1,19 @@
+# certs and keys MUST NOT be committed
+keys/*.pem
+ca/*.pem
+
+.venv/
+
+# Compiled Python files
+__pycache__/
+*.pyc
+*.o
+*.so
+
+.vscode/           
+.DS_Store          # macOS files
+.pytest_cache/
+
+# --- Generated Data ---
+*.log
+*.tmp

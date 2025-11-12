@@ -58,6 +58,7 @@ Quick summary
   lower-level CA operations (issue/renew/revoke/crl).
 
 # Terminal 1 (server/listener)
+```powershell
 python setup.py run --user Control-Bravo --port 7000
 
 # Terminal 2 (initiator)

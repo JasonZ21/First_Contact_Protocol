@@ -2,7 +2,15 @@ import pytest
 import importlib.util
 import pathlib
 import sys
-
+import tempfile
+import os
+import shutil
+import threading
+import socket
+import time as _time
+import app.utils as app_utils
+import app.handshake as app_handshake
+from cryptography.hazmat.primitives import serialization
 # Dynamically load helpers from tests/utils so pytest can import conftest
 _utils_dir = pathlib.Path(__file__).parent / "utils"
 
@@ -26,16 +34,6 @@ timewarp = _timewrap.timewarp
 repo_root = str(pathlib.Path(__file__).parent.parent)
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
-import tempfile
-import os
-import shutil
-import threading
-import socket
-import time as _time
-import app.utils as app_utils
-import app.handshake as app_handshake
-from cryptography.hazmat.primitives import serialization
-
 
 @pytest.fixture
 def session_pair(request, make_id_keys_factory, root_ca):

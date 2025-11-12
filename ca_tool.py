@@ -134,7 +134,6 @@ def main():
     elif args.command == "crl":
         # Print CRL
         try:
-            from cryptography import x509 as _x
             data = crl._load_raw_crl()
             print("CRL updated:", data.get("updated_at"))
             for e in data.get("revoked", []):

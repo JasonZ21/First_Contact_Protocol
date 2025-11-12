@@ -1,6 +1,24 @@
 # First Contact Protocol - Secure TLS Communication
 
-A peer-to-peer secure communication system using mutual TLS authentication with a Certificate Authority (PKI) model.
+A lightweight peer-to-peer chat demo that uses mutual TLS (mTLS) and a local
+Certificate Authority (CA) for peer authentication. This repo includes tools
+for issuing short-lived certificates, revoking certificates (signed JSON
+CRL), and recording issued certs in a minimal Merkle transparency log.
+
+This README covers setup, common workflows, troubleshooting, and developer
+notes.
+
+Prerequisites
+- Python 3.8+ (3.10/3.11 recommended)
+
+Table of contents
+- Overview
+- Quick start
+- Commands reference
+- CRL / renewal / Merkle log
+- Testing
+- Troubleshooting
+- Developer notes
 
 ## Overview
 
@@ -32,39 +50,12 @@ This will:
 - Generate certificates for `Pilot-Alpha` and `Control-Bravo`
 
 ### Step 2: Run the Clients
-*** Begin README
-# First Contact Protocol — Secure TLS Chat (mutual TLS)
-
-A lightweight peer-to-peer chat demo that uses mutual TLS (mTLS) and a local
-Certificate Authority (CA) for peer authentication. This repo includes tools
-for issuing short-lived certificates, revoking certificates (signed JSON
-CRL), and recording issued certs in a minimal Merkle transparency log.
-
-This README covers setup, common workflows, troubleshooting, and developer
-notes.
-
-Prerequisites
-- Python 3.8+ (3.10/3.11 recommended)
 
 Quick summary
 - Create a local CA and user certs, start two clients, and use `connect`/
   `send` to chat over TLS.
 - Use `setup.py` for cross-platform setup (recommended). `ca_tool.py` exposes
   lower-level CA operations (issue/renew/revoke/crl).
-
-Table of contents
-- Quick start
-- Commands reference
-- CRL / renewal / Merkle log
-- Testing
-- Troubleshooting
-- Developer notes
-
-## Quick start (one line)
-
-```powershell
-# setup (venv, deps, CA, keys) and run two clients in separate terminals
-python setup.py all
 
 # Terminal 1 (server/listener)
 python setup.py run --user Control-Bravo --port 7000
@@ -74,6 +65,12 @@ python setup.py run --user Pilot-Alpha --port 7001
 connect 127.0.0.1 7000
 send Hello from Pilot-Alpha!
 ```
+
+Commands inside the CLI:
+- `connect <IP> <PORT>` — initiate connection to a peer
+- `send <MSG>` — send an encrypted message over the established TLS channel
+- `status` — show connection state
+- `disconnect` — close the current connection
 
 ## Commands reference
 
@@ -125,28 +122,6 @@ Revocation policy & behavior
   3. CRL signature (if `ca/crl.json` exists) and whether the serial is revoked
 
 If the CRL is present but its signature cannot be verified, validation fails (fail-closed).
-
-## Running the clients (chat example)
-
-Terminal 1 (Control-Bravo):
-
-```powershell
-python setup.py run --user Control-Bravo --port 7000
-```
-
-Terminal 2 (Pilot-Alpha):
-
-```powershell
-python setup.py run --user Pilot-Alpha --port 7001
-connect 127.0.0.1 7000
-send Hello!
-```
-
-Commands inside the CLI:
-- `connect <IP> <PORT>` — initiate connection to a peer
-- `send <MSG>` — send an encrypted message over the established TLS channel
-- `status` — show connection state
-- `disconnect` — close the current connection
 
 ## Transparency log (Merkle)
 
